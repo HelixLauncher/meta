@@ -6,8 +6,8 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use anyhow::anyhow;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
+use thiserror::Error;
 
 #[derive(Debug, DeserializeFromStr, SerializeDisplay, Hash, Clone, PartialEq, Eq)]
 pub struct GradleSpecifier {
@@ -27,16 +27,24 @@ impl GradleSpecifier {
 	}
 }
 
+#[derive(Error, Debug)]
+pub enum GradleParseError {
+	#[error("\"{0}\" does not contain an artifact id!")]
+	ArtifactIdMissing(String),
+	#[error("\"{0}\" does not contain a version!")]
+	VersionMissing(String),
+}
+
 impl FromStr for GradleSpecifier {
-	type Err = anyhow::Error;
+	type Err = GradleParseError;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let (group, s) = s
 			.split_once(':')
-			.ok_or_else(|| anyhow!("\"{}\" does not contain an artifact id!", s))?;
+			.ok_or_else(|| GradleParseError::ArtifactIdMissing(s.to_string()))?;
 		let (artifact, s) = s
 			.split_once(':')
-			.ok_or_else(|| anyhow!("\"{}\" does not contain a version!", s))?;
+			.ok_or_else(|| GradleParseError::VersionMissing(s.to_string()))?;
 		let (s, extension) = s
 			.rsplit_once('@')
 			.map_or_else(|| (s, "jar"), |(s, extension)| (s, extension));

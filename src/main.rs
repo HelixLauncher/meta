@@ -6,7 +6,7 @@
 
 use anyhow::Result;
 
-use helix_meta::mojang;
+mod mojang;
 
 #[tokio::main]
 async fn main() -> Result<()> {

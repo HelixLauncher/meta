@@ -11,12 +11,13 @@ use chrono::{DateTime, Utc};
 use data_encoding::HEXLOWER;
 use futures::{StreamExt, TryStreamExt};
 use indexmap::{IndexMap, IndexSet};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
 
-use crate::helix;
-use crate::util::GradleSpecifier;
+use helix::OsName;
+use helix_meta::helix;
+use helix_meta::util::GradleSpecifier;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -50,7 +51,7 @@ enum RuleAction {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct OsRule {
-	name: Option<MojangOsName>,
+	name: Option<OsName>,
 	version: Option<String>,
 	arch: Option<String>,
 }
@@ -148,14 +149,6 @@ struct MojangNativeExtract {
 	exclude: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Copy, Debug, Hash, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum MojangOsName {
-	Linux,
-	Osx,
-	Windows,
-}
-
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct MojangLibrary {
@@ -166,7 +159,7 @@ struct MojangLibrary {
 	#[serde(default)]
 	extract: MojangNativeExtract,
 	#[serde(default)]
-	natives: HashMap<MojangOsName, String>,
+	natives: HashMap<OsName, String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -194,7 +187,7 @@ struct MojangVersion {
 }
 
 mod rules {
-	use super::{MojangOsName, Rule, RuleAction};
+	use super::{OsName, Rule, RuleAction};
 	use thiserror::Error;
 
 	#[derive(Error, Debug)]
@@ -203,13 +196,9 @@ mod rules {
 		UnsupportedFeature(&'static str),
 	}
 
-	pub(super) fn evaluate_rules_os_name(rules: &[Rule]) -> Result<Vec<MojangOsName>, Error> {
+	pub(super) fn evaluate_rules_os_name(rules: &[Rule]) -> Result<Vec<OsName>, Error> {
 		let mut result = vec![];
-		for current_os in [
-			MojangOsName::Linux,
-			MojangOsName::Osx,
-			MojangOsName::Windows,
-		] {
+		for current_os in [OsName::Linux, OsName::Osx, OsName::Windows] {
 			let mut allow = false;
 			for rule in rules {
 				if let Some(os) = &rule.os {
@@ -393,31 +382,30 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 		}
 
 		for (os, classifier) in library.natives {
-			let mut process_native =
-				|os: MojangOsName, classifier: String, arch: Option<helix::Arch>| {
-					ensure!(
-						!classifier.contains('$'),
-						"Unresolved classifier pattern in {}",
-						classifier
-					);
-					let name = library.name.with_classifier(classifier.to_owned());
-					add_download(
-						&name,
-						library
-							.downloads
-							.classifiers
-							.get(&classifier)
-							.with_context(|| {
-								format!("{classifier} on {} does not exist", library.name)
-							})?,
-					)?;
-					natives.insert(helix::Native {
-						name,
-						platform: helix::Platform { os: vec![os], arch },
-						exclusions: library.extract.exclude.clone(),
-					});
-					Ok(())
-				};
+			let mut process_native = |os: OsName, classifier: String, arch: Option<helix::Arch>| {
+				ensure!(
+					!classifier.contains('$'),
+					"Unresolved classifier pattern in {}",
+					classifier
+				);
+				let name = library.name.with_classifier(classifier.to_owned());
+				add_download(
+					&name,
+					library
+						.downloads
+						.classifiers
+						.get(&classifier)
+						.with_context(|| {
+							format!("{classifier} on {} does not exist", library.name)
+						})?,
+				)?;
+				natives.insert(helix::Native {
+					name,
+					platform: helix::Platform { os: vec![os], arch },
+					exclusions: library.extract.exclude.clone(),
+				});
+				Ok(())
+			};
 			if platform
 				.as_ref()
 				.map_or(true, |platform| platform.os.contains(&os))

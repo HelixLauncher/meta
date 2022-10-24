@@ -4,19 +4,26 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use serde::Serialize;
+use crate::util::GradleSpecifier;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, OneOrMany};
 
-use crate::{mojang::MojangOsName, util::GradleSpecifier};
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OsName {
+	Linux,
+	Osx,
+	Windows,
+}
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ComponentDependency {
 	pub id: String,
 	#[serde(skip_serializing_if = "Option::is_none", default)]
 	pub version: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Download {
 	pub name: GradleSpecifier,
 	pub url: String,
@@ -25,12 +32,12 @@ pub struct Download {
 	pub sha1: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Trait {
 	MacStartOnFirstThread,
 }
 
-#[derive(Serialize, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Eq, Clone, Copy, Hash, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Arch {
 	X86,
@@ -39,16 +46,16 @@ pub enum Arch {
 }
 
 #[serde_as]
-#[derive(Serialize, Hash, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Platform {
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	#[serde_as(as = "OneOrMany<_>")]
-	pub os: Vec<MojangOsName>,
+	pub os: Vec<OsName>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub arch: Option<Arch>,
 }
 
-#[derive(Serialize, Hash, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
 pub struct Native {
 	pub name: GradleSpecifier,
 	pub platform: Platform,
@@ -56,7 +63,7 @@ pub struct Native {
 	pub exclusions: Vec<String>,
 }
 
-#[derive(Serialize, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ConditionalClasspathEntry {
 	All(GradleSpecifier),
@@ -67,7 +74,7 @@ pub enum ConditionalClasspathEntry {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Component {
 	pub format_version: i32,
 	pub id: String,
