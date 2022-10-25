@@ -15,8 +15,8 @@ use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
 
-use helix::OsName;
-use helix_meta::helix;
+use helix_meta as helix;
+use helix_meta::component::OsName;
 use helix_meta::util::GradleSpecifier;
 
 #[derive(Deserialize, Debug)]
@@ -278,15 +278,27 @@ pub fn process() -> Result<()> {
 	let out_base = Path::new("out/net.minecraft");
 	fs::create_dir_all(out_base)?;
 
+	let mut index: helix::index::Index = vec![];
+
 	for file in fs::read_dir(version_base)? {
 		let file = file?;
-		process_version(&file, out_base)
+		let component = process_version(&file, out_base)
 			.with_context(|| format!("Failed to process {}", file.file_name().to_str().unwrap()))?;
+		index.push(component.into());
 	}
+
+	fs::write(
+		out_base.join("index.json"),
+		serde_json::to_string_pretty(&index)?,
+	)?;
+
 	Ok(())
 }
 
-fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::Error> {
+fn process_version(
+	file: &fs::DirEntry,
+	out_base: &Path,
+) -> Result<helix::component::Component, anyhow::Error> {
 	let version: MojangVersion = serde_json::from_str(&fs::read_to_string(file.path())?)
 		.with_context(|| format!("Failed to parse {}", file.file_name().to_str().unwrap()))?;
 	let mut classpath = IndexSet::with_capacity(version.libraries.len());
@@ -302,7 +314,7 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 	};
 	downloads.insert(
 		game_artifact_name.clone(),
-		helix::Download {
+		helix::component::Download {
 			name: game_artifact_name.to_owned(),
 			url: game_download.url,
 			size: game_download.size,
@@ -345,7 +357,7 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 		let platform = if ignore_rules || library.rules.is_empty() {
 			None
 		} else {
-			Some(helix::Platform {
+			Some(helix::component::Platform {
 				os: rules::evaluate_rules_os_name(&library.rules).with_context(|| {
 					format!("Rules for \"{}\" failed to evaluate", library.name)
 				})?,
@@ -359,7 +371,7 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 			} else {
 				downloads.insert(
 					name.to_owned(),
-					helix::Download {
+					helix::component::Download {
 						name: name.to_owned(),
 						url: artifact.url.to_owned(),
 						size: artifact.size,
@@ -373,8 +385,8 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 		if let Some(artifact) = library.downloads.artifact {
 			add_download(&library.name, &artifact)?;
 			classpath.insert(match &platform {
-				None => helix::ConditionalClasspathEntry::All(library.name.to_owned()),
-				Some(platform) => helix::ConditionalClasspathEntry::PlatformSpecific {
+				None => helix::component::ConditionalClasspathEntry::All(library.name.to_owned()),
+				Some(platform) => helix::component::ConditionalClasspathEntry::PlatformSpecific {
 					name: library.name.to_owned(),
 					platform: platform.clone(),
 				},
@@ -382,30 +394,31 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 		}
 
 		for (os, classifier) in library.natives {
-			let mut process_native = |os: OsName, classifier: String, arch: Option<helix::Arch>| {
-				ensure!(
-					!classifier.contains('$'),
-					"Unresolved classifier pattern in {}",
-					classifier
-				);
-				let name = library.name.with_classifier(classifier.to_owned());
-				add_download(
-					&name,
-					library
-						.downloads
-						.classifiers
-						.get(&classifier)
-						.with_context(|| {
-							format!("{classifier} on {} does not exist", library.name)
-						})?,
-				)?;
-				natives.insert(helix::Native {
-					name,
-					platform: helix::Platform { os: vec![os], arch },
-					exclusions: library.extract.exclude.clone(),
-				});
-				Ok(())
-			};
+			let mut process_native =
+				|os: OsName, classifier: String, arch: Option<helix::component::Arch>| {
+					ensure!(
+						!classifier.contains('$'),
+						"Unresolved classifier pattern in {}",
+						classifier
+					);
+					let name = library.name.with_classifier(classifier.to_owned());
+					add_download(
+						&name,
+						library
+							.downloads
+							.classifiers
+							.get(&classifier)
+							.with_context(|| {
+								format!("{classifier} on {} does not exist", library.name)
+							})?,
+					)?;
+					natives.insert(helix::component::Native {
+						name,
+						platform: helix::component::Platform { os: vec![os], arch },
+						exclusions: library.extract.exclude.clone(),
+					});
+					Ok(())
+				};
 			if platform
 				.as_ref()
 				.map_or(true, |platform| platform.os.contains(&os))
@@ -414,12 +427,12 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 					process_native(
 						os,
 						classifier.replace("${arch}", "32"),
-						Some(helix::Arch::X86),
+						Some(helix::component::Arch::X86),
 					)?;
 					process_native(
 						os,
 						classifier.replace("${arch}", "64"),
-						Some(helix::Arch::X86_64),
+						Some(helix::component::Arch::X86_64),
 					)?;
 				} else {
 					process_native(os, classifier, None)?;
@@ -427,11 +440,11 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 			}
 		}
 	}
-	let component = helix::Component {
+	let component = helix::component::Component {
 		format_version: 1,
 		id: "net.minecraft".into(),
 		traits: if is_lwjgl3 {
-			vec![helix::Trait::MacStartOnFirstThread]
+			vec![helix::component::Trait::MacStartOnFirstThread]
 		} else {
 			vec![]
 		},
@@ -448,5 +461,5 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<(), anyhow::E
 		out_base.join(format!("{}.json", version.id)),
 		serde_json::to_string_pretty(&component)?,
 	)?;
-	Ok(())
+	Ok(component)
 }
