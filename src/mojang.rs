@@ -108,6 +108,18 @@ struct MojangAssetIndex {
 	url: String,
 }
 
+impl From<MojangAssetIndex> for helix::component::Assets {
+	fn from(assets: MojangAssetIndex) -> Self {
+		Self {
+			id: assets.id,
+			url: assets.url,
+			sha1: assets.sha1,
+			size: assets.size,
+			total_size: assets.total_size,
+		}
+	}
+}
+
 #[derive(Deserialize, Debug)]
 struct MojangDownload {
 	sha1: String,
@@ -448,6 +460,7 @@ fn process_version(
 		} else {
 			vec![]
 		},
+		assets: Some(version.asset_index.into()),
 		version: version.id.to_owned(),
 		requires: vec![], // TODO: lwjgl 2 (deal with that later)
 		conflicts: vec![],

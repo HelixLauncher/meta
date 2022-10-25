@@ -73,8 +73,18 @@ pub enum ConditionalClasspathEntry {
 	},
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Assets {
+	pub id: String,
+	pub url: String,
+	pub sha1: String,
+	pub size: i32,
+	pub total_size: i32, // TODO: is this really necessary?
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Component {
 	pub format_version: i32,
 	pub id: String,
@@ -83,12 +93,13 @@ pub struct Component {
 	pub requires: Vec<ComponentDependency>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub traits: Vec<Trait>,
+	pub assets: Option<Assets>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub conflicts: Vec<ComponentDependency>,
 	pub downloads: Vec<Download>,
+	pub game_jar: Option<GradleSpecifier>, // separate from classpath to make injecting jarmods possible
+	pub main_class: Option<String>,
 	pub classpath: Vec<ConditionalClasspathEntry>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub natives: Vec<Native>,
-	pub main_class: Option<String>,
-	pub game_jar: Option<GradleSpecifier>, // separate from classpath to make injecting jarmods possible
 }
