@@ -15,9 +15,9 @@ use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
 
-use helix_meta as helix;
-use helix_meta::component::OsName;
-use helix_meta::util::GradleSpecifier;
+use helixlauncher_meta as helix;
+use helixlauncher_meta::component::OsName;
+use helixlauncher_meta::util::GradleSpecifier;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
