@@ -9,6 +9,7 @@ repository = "https://github.com/HelixLauncher/meta"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cfg-if = "1.0.0"
 serde = {version = "1", features = ["derive"]}
 serde_with = "2"
 thiserror = "1"

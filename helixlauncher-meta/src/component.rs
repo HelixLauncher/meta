@@ -34,10 +34,11 @@ pub struct Download {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum Trait {
+	/// This component needs -XstartOnFirstThread on macOS.
 	MacStartOnFirstThread,
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, Clone, Copy, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Arch {
 	X86,

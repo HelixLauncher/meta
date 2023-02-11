@@ -9,6 +9,8 @@ use std::{fmt::Display, str::FromStr};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use thiserror::Error;
 
+use crate::component;
+
 #[derive(Debug, DeserializeFromStr, SerializeDisplay, Hash, Clone, PartialEq, Eq)]
 pub struct GradleSpecifier {
 	pub group: String,
@@ -74,5 +76,29 @@ impl Display for GradleSpecifier {
 			write!(f, "@{}", self.extension)?;
 		}
 		Ok(())
+	}
+}
+
+cfg_if::cfg_if! {
+	if #[cfg(windows)] {
+		pub const CURRENT_OS: component::OsName = component::OsName::Windows;
+	} else if #[cfg(target_os = "macos")] {
+		pub const CURRENT_OS: component::OsName = component::OsName::Osx;
+	} else if #[cfg(target_os = "linux")] {
+		pub const CURRENT_OS: component::OsName = component::OsName::Linux;
+	} else {
+		compile_error!("Unsupported OS");
+	}
+}
+
+cfg_if::cfg_if! {
+	if #[cfg(target_arch = "x86")] {
+		pub const CURRENT_ARCH: component::Arch = component::Arch::X86;
+	} else if #[cfg(target_arch = "x86_64")] {
+		pub const CURRENT_ARCH: component::Arch = component::Arch::X86_64;
+	} else if #[cfg(target_arch = "aarch64")] {
+		pub const CURRENT_ARCH: component::Arch = component::Arch::Arm64;
+	} else {
+		compile_error!("Unsupported CPU architecture");
 	}
 }
