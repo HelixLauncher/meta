@@ -470,6 +470,7 @@ fn process_version(
 		classpath: classpath.into_iter().collect(),
 		natives: natives.into_iter().collect(),
 		main_class: Some(version.main_class),
+		jarmods: vec![],
 		game_jar: Some(game_artifact_name),
 	};
 	fs::write(
