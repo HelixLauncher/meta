@@ -18,8 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions-rs/toolchain@v1
-      profile: minimal
-      components: rustfmt, clippy
+      with:
+        profile: minimal
+        components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
     - name: Build
       uses: actions-rs/cargo@v1
