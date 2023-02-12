@@ -102,9 +102,9 @@ struct MojangVersionArguments {
 struct MojangAssetIndex {
 	id: String,
 	sha1: String,
-	size: i32,
+	size: u32,
 	#[serde(rename = "totalSize")]
-	total_size: i32,
+	total_size: u32,
 	url: String,
 }
 
@@ -123,7 +123,7 @@ impl From<MojangAssetIndex> for helix::component::Assets {
 #[derive(Deserialize, Debug)]
 struct MojangDownload {
 	sha1: String,
-	size: i32,
+	size: u32,
 	url: String,
 }
 
@@ -152,7 +152,7 @@ struct MojangLibraryDownloads {
 struct MojangLibraryArtifact {
 	path: String,
 	sha1: String,
-	size: i32,
+	size: u32,
 	url: String,
 }
 

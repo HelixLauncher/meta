@@ -35,7 +35,7 @@ pub struct Download {
 	pub name: GradleSpecifier,
 	pub url: String,
 	// these two might have to be made optional
-	pub size: i32,
+	pub size: u32,
 	pub hash: Hash,
 }
 
@@ -86,15 +86,15 @@ pub struct Assets {
 	pub id: String,
 	pub url: String,
 	pub sha1: String,
-	pub size: i32,
-	pub total_size: i32, // TODO: is this really necessary?
+	pub size: u32,
+	pub total_size: u32, // TODO: is this really necessary?
 }
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Component {
-	pub format_version: i32,
+	pub format_version: u32,
 	pub id: String,
 	pub version: String,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
