@@ -23,13 +23,20 @@ pub struct ComponentDependency {
 	pub version: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum Hash {
+	SHA256(String),
+	SHA1(String),
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Download {
 	pub name: GradleSpecifier,
 	pub url: String,
 	// these two might have to be made optional
 	pub size: i32,
-	pub sha1: String,
+	pub hash: Hash,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]

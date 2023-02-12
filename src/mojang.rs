@@ -330,7 +330,7 @@ fn process_version(
 			name: game_artifact_name.to_owned(),
 			url: game_download.url,
 			size: game_download.size,
-			sha1: game_download.sha1,
+			hash: helix::component::Hash::SHA1(game_download.sha1),
 		},
 	);
 	let mut is_lwjgl3 = false;
@@ -379,7 +379,9 @@ fn process_version(
 
 		let mut add_download = |name: &GradleSpecifier, artifact: &MojangLibraryArtifact| {
 			if downloads.contains_key(name) {
-				ensure!(artifact.sha1 == downloads[name].sha1);
+				ensure!(
+					matches!(&downloads[name].hash, helix::component::Hash::SHA1(sha1) if *sha1 == artifact.sha1)
+				);
 			} else {
 				downloads.insert(
 					name.to_owned(),
@@ -387,7 +389,7 @@ fn process_version(
 						name: name.to_owned(),
 						url: artifact.url.to_owned(),
 						size: artifact.size,
-						sha1: artifact.sha1.to_owned(),
+						hash: helix::component::Hash::SHA1(artifact.sha1.to_owned()),
 					},
 				);
 			}
