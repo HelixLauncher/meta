@@ -105,6 +105,8 @@ pub struct Component {
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub conflicts: Vec<ComponentDependency>,
 	pub downloads: Vec<Download>,
+	#[serde(skip_serializing_if = "Vec::is_empty", default)]
+	pub jarmods: Vec<GradleSpecifier>,
 	pub game_jar: Option<GradleSpecifier>, // separate from classpath to make injecting jarmods possible
 	pub main_class: Option<String>,
 	pub classpath: Vec<ConditionalClasspathEntry>,
