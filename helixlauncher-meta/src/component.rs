@@ -4,6 +4,8 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::fmt::Display;
+
 use crate::util::GradleSpecifier;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, OneOrMany};
@@ -28,6 +30,15 @@ pub struct ComponentDependency {
 pub enum Hash {
 	SHA256(String),
 	SHA1(String),
+}
+
+impl Display for Hash {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Hash::SHA1(hash) => write!(f, "SHA1 hash {hash}"),
+			Hash::SHA256(hash) => write!(f, "SHA256 hash {hash}"),
+		}
+	}
 }
 
 #[derive(Serialize, Deserialize, Debug)]
