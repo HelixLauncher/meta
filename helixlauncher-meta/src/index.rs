@@ -21,7 +21,7 @@ impl From<&component::Component> for IndexEntry {
 			version: component.version.to_string(),
 			conflicts: component.conflicts.to_vec(),
 			requires: component.requires.to_vec(),
-			release_time: component.release_time.clone(),
+			release_time: component.release_time,
 		}
 	}
 }

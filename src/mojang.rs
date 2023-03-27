@@ -4,15 +4,12 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::collections::HashSet;
-use std::sync::Mutex;
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
 use chrono::{DateTime, Utc};
 use data_encoding::HEXLOWER;
 use futures::{StreamExt, TryStreamExt};
-use helix::component;
 use indexmap::{IndexMap, IndexSet};
 use lazy_static::lazy_static;
 use maven_version::Maven3ArtifactVersion;
