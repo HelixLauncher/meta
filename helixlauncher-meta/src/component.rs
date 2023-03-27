@@ -7,6 +7,7 @@
 use std::fmt::Display;
 
 use crate::util::GradleSpecifier;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, OneOrMany};
 
@@ -101,6 +102,24 @@ pub struct Assets {
 	pub total_size: u32, // TODO: is this really necessary?
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ConditionFeature {
+	Demo,
+	Fullscreen,
+	CustomResolution,
+}
+
+// TODO: this feels a bit hacky?
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MinecraftArgument {
+	Always(String),
+	Conditional {
+		value: String,
+		feature: ConditionFeature,
+	},
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -120,7 +139,10 @@ pub struct Component {
 	pub jarmods: Vec<GradleSpecifier>,
 	pub game_jar: Option<GradleSpecifier>, // separate from classpath to make injecting jarmods possible
 	pub main_class: Option<String>,
+	#[serde(skip_serializing_if = "Vec::is_empty", default)]
+	pub game_arguments: Vec<MinecraftArgument>,
 	pub classpath: Vec<ConditionalClasspathEntry>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub natives: Vec<Native>,
+	pub release_time: DateTime<Utc>,
 }

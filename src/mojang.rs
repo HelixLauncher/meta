@@ -4,13 +4,18 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::collections::HashSet;
+use std::sync::Mutex;
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
 use chrono::{DateTime, Utc};
 use data_encoding::HEXLOWER;
 use futures::{StreamExt, TryStreamExt};
+use helix::component;
 use indexmap::{IndexMap, IndexSet};
+use lazy_static::lazy_static;
+use maven_version::Maven3ArtifactVersion;
 use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
@@ -299,6 +304,8 @@ pub fn process() -> Result<()> {
 		index.push(component.into());
 	}
 
+	index.sort_by(|x, y| y.release_time.cmp(&x.release_time));
+
 	fs::write(
 		out_base.join("index.json"),
 		serde_json::to_string_pretty(&index)?,
@@ -334,13 +341,26 @@ fn process_version(
 		},
 	);
 	let mut is_lwjgl3 = false;
-	for library in version.libraries {
+	for mut library in version.libraries {
 		let mut ignore_rules = false;
 		ensure!(
 			library.rules.len() <= 1
 				|| (library.rules[0].is_always_allow() && library.rules.len() <= 2),
 			"Multiple rules not handled currently"
 		);
+		if library.name.artifact.contains("log4j") {
+			lazy_static! {
+				static ref OLDEST_UPGRADE_VERSION: Maven3ArtifactVersion<'static> =
+					Maven3ArtifactVersion::new("2.8.0");
+				static ref NEWEST_UPGRADE_VERSION: Maven3ArtifactVersion<'static> =
+					Maven3ArtifactVersion::new("2.17.0");
+			}
+			let parsed_version = Maven3ArtifactVersion::new(&library.name.version);
+			if *OLDEST_UPGRADE_VERSION <= parsed_version && parsed_version < *NEWEST_UPGRADE_VERSION
+			{
+				library.name.version = String::from("2.17.0");
+			}
+		}
 		if library.name.group.starts_with("org.lwjgl") {
 			if library.name.version.starts_with("3.") {
 				is_lwjgl3 = true;
@@ -469,9 +489,11 @@ fn process_version(
 		downloads: downloads.into_values().collect(),
 		classpath: classpath.into_iter().collect(),
 		natives: natives.into_iter().collect(),
+		game_arguments: vec![],
 		main_class: Some(version.main_class),
 		jarmods: vec![],
 		game_jar: Some(game_artifact_name),
+		release_time: version.release_time,
 	};
 	fs::write(
 		out_base.join(format!("{}.json", version.id)),
