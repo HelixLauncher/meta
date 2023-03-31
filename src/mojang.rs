@@ -4,15 +4,18 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+use std::borrow::Cow;
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
 use chrono::{DateTime, Utc};
 use data_encoding::HEXLOWER;
 use futures::{StreamExt, TryStreamExt};
+use helix::component::{ConditionFeature, MinecraftArgument};
 use indexmap::{IndexMap, IndexSet};
 use lazy_static::lazy_static;
 use maven_version::Maven3ArtifactVersion;
+use regex::{Captures, Regex};
 use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
@@ -471,6 +474,74 @@ fn process_version(
 			}
 		}
 	}
+
+	fn remap_vars(s: &str) -> Cow<'_, str> {
+		lazy_static! {
+			static ref VAR_PATTERN: Regex = Regex::new("(\\$\\{[a-zA-Z0-9_]+\\})").unwrap();
+		}
+		VAR_PATTERN.replace_all(s, |c: &Captures<'_>| match c.get(1).unwrap().as_str() {
+			"${auth_access_token}" => "${user.token}",
+			"${auth_player_name}" => "${user.name}",
+			"${version_name}" => "${instance.minecraft_version}",
+			"${game_directory}" => "${instance.game_dir}",
+			"${assets_root}" => "${instance.assets_dir}",
+			"${assets_index_name}" => "${instance.assets_index_name}",
+			"${auth_uuid}" => "${user.uuid}",
+			"${clientid}" => "",                  // TODO
+			"${auth_xuid}" => "",                 // TODO
+			"${auth_session}" => "${user.token}", // TODO: is this really just the token?
+			"${user_type}" => "${user.type}",     // TODO: what is this?
+			"${version_type}" => "${instance.minecraft_version_type}",
+			"${resolution_width}" => "${window.width}",
+			"${resolution_height}" => "${window.height}",
+			"${user_properties}" => "${user.properties}", // TODO: what is this?
+			"${game_assets}" => "${instance.virtual_assets_dir}",
+			_ => panic!("{} not supported", s),
+		})
+	}
+
+	let mut arguments = Vec::new();
+	if let Some(version_arguments) = version.arguments {
+		for argument in version_arguments.game {
+			match argument {
+				MojangConditionalValue::Always(argument) => {
+					arguments.push(MinecraftArgument::Always(remap_vars(&argument).into()))
+				}
+				MojangConditionalValue::Conditional { rules, value } => {
+					ensure!(rules.len() == 1);
+					ensure!(rules[0].action == RuleAction::Allow);
+					ensure!(rules[0].os.is_none());
+					let mut feature = None;
+					if let Some(features) = &rules[0].features {
+						if let Some(is_demo_user) = features.is_demo_user {
+							ensure!(is_demo_user);
+							feature = Some(ConditionFeature::Demo);
+						}
+						if let Some(has_custom_resolution) = features.has_custom_resolution {
+							ensure!(has_custom_resolution && matches!(feature, None));
+							feature = Some(ConditionFeature::CustomResolution);
+						}
+					} else {
+						bail!("Argument rules empty");
+					}
+					let feature = feature.unwrap();
+					for argument in value {
+						arguments.push(MinecraftArgument::Conditional {
+							value: remap_vars(&argument).into(),
+							feature,
+						})
+					}
+				}
+			}
+		}
+	}
+	if let Some(minecraft_arguments) = version.minecraft_arguments {
+		for argument in minecraft_arguments.split(' ') {
+			arguments.push(MinecraftArgument::Always(remap_vars(argument).into()));
+		}
+		// TODO: does mojang launcher add conditional arguments automatically?
+	}
+
 	let component = helix::component::Component {
 		format_version: 1,
 		id: "net.minecraft".into(),
@@ -486,7 +557,7 @@ fn process_version(
 		downloads: downloads.into_values().collect(),
 		classpath: classpath.into_iter().collect(),
 		natives: natives.into_iter().collect(),
-		game_arguments: vec![],
+		game_arguments: arguments,
 		main_class: Some(version.main_class),
 		jarmods: vec![],
 		game_jar: Some(game_artifact_name),

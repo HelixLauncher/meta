@@ -102,7 +102,7 @@ pub struct Assets {
 	pub total_size: u32, // TODO: is this really necessary?
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ConditionFeature {
 	Demo,
@@ -112,6 +112,7 @@ pub enum ConditionFeature {
 
 // TODO: this feels a bit hacky?
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum MinecraftArgument {
 	Always(String),
 	Conditional {
