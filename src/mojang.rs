@@ -24,7 +24,7 @@ use helixlauncher_meta as helix;
 use helixlauncher_meta::component::OsName;
 use helixlauncher_meta::util::GradleSpecifier;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 enum VersionType {
 	Experiment,
@@ -32,6 +32,18 @@ enum VersionType {
 	Release,
 	OldBeta,
 	OldAlpha,
+}
+
+impl VersionType {
+	pub fn as_str(self) -> &'static str {
+		match self {
+			Self::Experiment => "experiment",
+			Self::Snapshot => "snapshot",
+			Self::Release => "release",
+			Self::OldBeta => "old_beta",
+			Self::OldAlpha => "old_alpha",
+		}
+	}
 }
 
 #[derive(Deserialize, Debug)]
@@ -318,12 +330,12 @@ fn process_version(
 	file: &fs::DirEntry,
 	out_base: &Path,
 ) -> Result<helix::component::Component, anyhow::Error> {
-	let version: MojangVersion = serde_json::from_str(&fs::read_to_string(file.path())?)
+	let mut version: MojangVersion = serde_json::from_str(&fs::read_to_string(file.path())?)
 		.with_context(|| format!("Failed to parse {}", file.file_name().to_str().unwrap()))?;
 	let mut classpath = IndexSet::with_capacity(version.libraries.len());
 	let mut natives = IndexSet::with_capacity(version.libraries.len());
 	let mut downloads = IndexMap::with_capacity(version.libraries.len() * 2);
-	let game_download = version.downloads.client;
+	let game_download = &version.downloads.client;
 	let game_artifact_name = GradleSpecifier {
 		group: "com.mojang".to_owned(),
 		artifact: "minecraft".to_owned(),
@@ -335,13 +347,13 @@ fn process_version(
 		game_artifact_name.clone(),
 		helix::component::Download {
 			name: game_artifact_name.to_owned(),
-			url: game_download.url,
+			url: game_download.url.to_string(),
 			size: game_download.size,
-			hash: helix::component::Hash::SHA1(game_download.sha1),
+			hash: helix::component::Hash::SHA1(game_download.sha1.to_string()),
 		},
 	);
 	let mut is_lwjgl3 = false;
-	for mut library in version.libraries {
+	for mut library in &mut version.libraries {
 		let mut ignore_rules = false;
 		ensure!(
 			library.rules.len() <= 1
@@ -416,8 +428,8 @@ fn process_version(
 			Ok(())
 		};
 
-		if let Some(artifact) = library.downloads.artifact {
-			add_download(&library.name, &artifact)?;
+		if let Some(artifact) = &library.downloads.artifact {
+			add_download(&library.name, artifact)?;
 			classpath.insert(match &platform {
 				None => helix::component::ConditionalClasspathEntry::All(library.name.to_owned()),
 				Some(platform) => helix::component::ConditionalClasspathEntry::PlatformSpecific {
@@ -427,9 +439,9 @@ fn process_version(
 			});
 		}
 
-		for (os, classifier) in library.natives {
+		for (os, classifier) in &library.natives {
 			let mut process_native =
-				|os: OsName, classifier: String, arch: Option<helix::component::Arch>| {
+				|os: OsName, classifier: &String, arch: Option<helix::component::Arch>| {
 					ensure!(
 						!classifier.contains('$'),
 						"Unresolved classifier pattern in {}",
@@ -441,7 +453,7 @@ fn process_version(
 						library
 							.downloads
 							.classifiers
-							.get(&classifier)
+							.get(classifier)
 							.with_context(|| {
 								format!("{classifier} on {} does not exist", library.name)
 							})?,
@@ -455,27 +467,27 @@ fn process_version(
 				};
 			if platform
 				.as_ref()
-				.map_or(true, |platform| platform.os.contains(&os))
+				.map_or(true, |platform| platform.os.contains(os))
 			{
 				if classifier.contains("${arch}") {
 					process_native(
-						os,
-						classifier.replace("${arch}", "32"),
+						*os,
+						&classifier.replace("${arch}", "32"),
 						Some(helix::component::Arch::X86),
 					)?;
 					process_native(
-						os,
-						classifier.replace("${arch}", "64"),
+						*os,
+						&classifier.replace("${arch}", "64"),
 						Some(helix::component::Arch::X86_64),
 					)?;
 				} else {
-					process_native(os, classifier, None)?;
+					process_native(*os, classifier, None)?;
 				}
 			}
 		}
 	}
 
-	fn remap_vars(s: &str) -> Cow<'_, str> {
+	fn remap_vars<'a>(s: &'a str, version: &MojangVersion) -> Cow<'a, str> {
 		lazy_static! {
 			static ref VAR_PATTERN: Regex = Regex::new("(\\$\\{[a-zA-Z0-9_]+\\})").unwrap();
 		}
@@ -491,7 +503,7 @@ fn process_version(
 			"${auth_xuid}" => "",                 // TODO
 			"${auth_session}" => "${user.token}", // TODO: is this really just the token?
 			"${user_type}" => "${user.type}",     // TODO: what is this?
-			"${version_type}" => "${instance.minecraft_version_type}",
+			"${version_type}" => version.version_type.as_str(),
 			"${resolution_width}" => "${window.width}",
 			"${resolution_height}" => "${window.height}",
 			"${user_properties}" => "${user.properties}", // TODO: what is this?
@@ -501,12 +513,12 @@ fn process_version(
 	}
 
 	let mut arguments = Vec::new();
-	if let Some(version_arguments) = version.arguments {
-		for argument in version_arguments.game {
+	if let Some(version_arguments) = &version.arguments {
+		for argument in &version_arguments.game {
 			match argument {
-				MojangConditionalValue::Always(argument) => {
-					arguments.push(MinecraftArgument::Always(remap_vars(&argument).into()))
-				}
+				MojangConditionalValue::Always(argument) => arguments.push(
+					MinecraftArgument::Always(remap_vars(argument, &version).into()),
+				),
 				MojangConditionalValue::Conditional { rules, value } => {
 					ensure!(rules.len() == 1);
 					ensure!(rules[0].action == RuleAction::Allow);
@@ -527,7 +539,7 @@ fn process_version(
 					let feature = feature.unwrap();
 					for argument in value {
 						arguments.push(MinecraftArgument::Conditional {
-							value: remap_vars(&argument).into(),
+							value: remap_vars(argument, &version).into(),
 							feature,
 						})
 					}
@@ -535,11 +547,17 @@ fn process_version(
 			}
 		}
 	}
-	if let Some(minecraft_arguments) = version.minecraft_arguments {
+	if let Some(minecraft_arguments) = &version.minecraft_arguments {
 		for argument in minecraft_arguments.split(' ') {
-			arguments.push(MinecraftArgument::Always(remap_vars(argument).into()));
+			arguments.push(MinecraftArgument::Always(
+				remap_vars(argument, &version).into(),
+			));
 		}
-		// TODO: does mojang launcher add conditional arguments automatically?
+		arguments.push(MinecraftArgument::Conditional {
+			value: String::from("--demo"),
+			feature: ConditionFeature::Demo,
+		});
+		// TODO: which conditional arguments does mojang launcher add automatically?
 	}
 
 	let component = helix::component::Component {
