@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+  schedule:
+    - cron: "5,35 * * * *"
+
+concurrency: ${{ (github.ref == 'refs/heads/main' && 'update' ) || github.run_id }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,11 +21,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
     - name: Build
       uses: actions-rs/cargo@v1
