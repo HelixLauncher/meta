@@ -5,6 +5,7 @@
  */
 
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
@@ -78,6 +79,10 @@ struct OsRule {
 struct FeaturesRule {
 	is_demo_user: Option<bool>,
 	has_custom_resolution: Option<bool>,
+	has_quick_plays_support: Option<bool>,
+	is_quick_play_singleplayer: Option<bool>,
+	is_quick_play_multiplayer: Option<bool>,
+	is_quick_play_realms: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -326,6 +331,28 @@ pub fn process() -> Result<()> {
 	Ok(())
 }
 
+// necessary to give the traits a stable ordering while not implementing Ord on Trait
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+struct TraitOrdWrapper(helix::component::Trait);
+
+impl PartialOrd for TraitOrdWrapper {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for TraitOrdWrapper {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		(self.0 as u8).cmp(&(other.0 as u8))
+	}
+}
+
+impl From<TraitOrdWrapper> for helix::component::Trait {
+	fn from(value: TraitOrdWrapper) -> Self {
+		value.0
+	}
+}
+
 fn process_version(
 	file: &fs::DirEntry,
 	out_base: &Path,
@@ -352,6 +379,7 @@ fn process_version(
 			hash: helix::component::Hash::SHA1(game_download.sha1.to_string()),
 		},
 	);
+	let mut traits = BTreeSet::new();
 	let mut is_lwjgl3 = false;
 	for mut library in &mut version.libraries {
 		let mut ignore_rules = false;
@@ -487,6 +515,12 @@ fn process_version(
 		}
 	}
 
+	if is_lwjgl3 {
+		traits.insert(TraitOrdWrapper(
+			helix::component::Trait::MacStartOnFirstThread,
+		));
+	}
+
 	fn remap_vars<'a>(s: &'a str, version: &MojangVersion) -> Cow<'a, str> {
 		lazy_static! {
 			static ref VAR_PATTERN: Regex = Regex::new("(\\$\\{[a-zA-Z0-9_]+\\})").unwrap();
@@ -508,10 +542,13 @@ fn process_version(
 			"${resolution_height}" => "${window.height}",
 			"${user_properties}" => "${user.properties}", // TODO: what is this?
 			"${game_assets}" => "${instance.virtual_assets_dir}",
+			"${quickPlaySingleplayer}" => "${launch.world}",
+			"${quickPlayMultiplayer}" => "${launch.server}",
 			_ => panic!("{} not supported", s),
 		})
 	}
 
+	// TODO: add traits from arguments
 	let mut arguments = Vec::new();
 	if let Some(version_arguments) = &version.arguments {
 		for argument in &version_arguments.game {
@@ -531,7 +568,35 @@ fn process_version(
 						}
 						if let Some(has_custom_resolution) = features.has_custom_resolution {
 							ensure!(has_custom_resolution && matches!(feature, None));
+							traits.insert(TraitOrdWrapper(
+								helix::component::Trait::SupportsCustomResolution,
+							));
 							feature = Some(ConditionFeature::CustomResolution);
+						}
+						if let Some(has_quick_plays_support) = features.has_quick_plays_support {
+							ensure!(has_quick_plays_support && matches!(feature, None));
+							continue;
+						}
+						if let Some(is_quick_play_singleplayer) =
+							features.is_quick_play_singleplayer
+						{
+							ensure!(is_quick_play_singleplayer && matches!(feature, None));
+							traits.insert(TraitOrdWrapper(
+								helix::component::Trait::SupportsQuickPlayWorld,
+							));
+							feature = Some(ConditionFeature::QuickPlayWorld);
+						}
+						if let Some(is_quick_play_multiplayer) = features.is_quick_play_multiplayer
+						{
+							ensure!(is_quick_play_multiplayer && matches!(feature, None));
+							traits.insert(TraitOrdWrapper(
+								helix::component::Trait::SupportsQuickPlayServer,
+							));
+							feature = Some(ConditionFeature::QuickPlayServer);
+						}
+						if let Some(is_quick_play_realms) = features.is_quick_play_realms {
+							ensure!(is_quick_play_realms && matches!(feature, None));
+							continue;
 						}
 					} else {
 						bail!("Argument rules empty");
@@ -563,11 +628,7 @@ fn process_version(
 	let component = helix::component::Component {
 		format_version: 1,
 		id: "net.minecraft".into(),
-		traits: if is_lwjgl3 {
-			vec![helix::component::Trait::MacStartOnFirstThread]
-		} else {
-			vec![]
-		},
+		traits: traits.into_iter().map(|t| t.into()).collect(),
 		assets: Some(version.asset_index.into()),
 		version: version.id.to_owned(),
 		requires: vec![], // TODO: lwjgl 2 (deal with that later)

@@ -55,6 +55,10 @@ pub struct Download {
 pub enum Trait {
 	/// This component needs -XstartOnFirstThread on macOS.
 	MacStartOnFirstThread,
+	SupportsCustomResolution,
+	SupportsQuickPlayServerLegacy,
+	SupportsQuickPlayServer,
+	SupportsQuickPlayWorld,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -108,6 +112,9 @@ pub enum ConditionFeature {
 	Demo,
 	Fullscreen,
 	CustomResolution,
+	QuickPlayServerLegacy,
+	QuickPlayServer,
+	QuickPlayWorld,
 }
 
 // TODO: this feels a bit hacky?
