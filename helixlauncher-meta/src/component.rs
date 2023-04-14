@@ -4,7 +4,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::fmt::Display;
+use std::{collections::BTreeSet, fmt::Display};
 
 use crate::util::GradleSpecifier;
 use chrono::{DateTime, Utc};
@@ -51,7 +51,10 @@ pub struct Download {
 	pub hash: Hash,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+/// A trait of a component or instance.
+///
+/// The [Ord] and [PartialOrd] impls are for use with [BTreeSet].
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Trait {
 	/// This component needs -XstartOnFirstThread on macOS.
 	MacStartOnFirstThread,
@@ -137,8 +140,8 @@ pub struct Component {
 	pub version: String,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub requires: Vec<ComponentDependency>,
-	#[serde(skip_serializing_if = "Vec::is_empty", default)]
-	pub traits: Vec<Trait>,
+	#[serde(skip_serializing_if = "BTreeSet::is_empty", default)]
+	pub traits: BTreeSet<Trait>,
 	pub assets: Option<Assets>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub conflicts: Vec<ComponentDependency>,

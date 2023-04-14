@@ -331,28 +331,6 @@ pub fn process() -> Result<()> {
 	Ok(())
 }
 
-// necessary to give the traits a stable ordering while not implementing Ord on Trait
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-struct TraitOrdWrapper(helix::component::Trait);
-
-impl PartialOrd for TraitOrdWrapper {
-	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-		Some(self.cmp(other))
-	}
-}
-
-impl Ord for TraitOrdWrapper {
-	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-		(self.0 as u8).cmp(&(other.0 as u8))
-	}
-}
-
-impl From<TraitOrdWrapper> for helix::component::Trait {
-	fn from(value: TraitOrdWrapper) -> Self {
-		value.0
-	}
-}
-
 fn process_version(
 	file: &fs::DirEntry,
 	out_base: &Path,
@@ -516,9 +494,7 @@ fn process_version(
 	}
 
 	if is_lwjgl3 {
-		traits.insert(TraitOrdWrapper(
-			helix::component::Trait::MacStartOnFirstThread,
-		));
+		traits.insert(helix::component::Trait::MacStartOnFirstThread);
 	}
 
 	fn remap_vars<'a>(s: &'a str, version: &MojangVersion) -> Cow<'a, str> {
@@ -568,9 +544,7 @@ fn process_version(
 						}
 						if let Some(has_custom_resolution) = features.has_custom_resolution {
 							ensure!(has_custom_resolution && matches!(feature, None));
-							traits.insert(TraitOrdWrapper(
-								helix::component::Trait::SupportsCustomResolution,
-							));
+							traits.insert(helix::component::Trait::SupportsCustomResolution);
 							feature = Some(ConditionFeature::CustomResolution);
 						}
 						if let Some(has_quick_plays_support) = features.has_quick_plays_support {
@@ -581,17 +555,13 @@ fn process_version(
 							features.is_quick_play_singleplayer
 						{
 							ensure!(is_quick_play_singleplayer && matches!(feature, None));
-							traits.insert(TraitOrdWrapper(
-								helix::component::Trait::SupportsQuickPlayWorld,
-							));
+							traits.insert(helix::component::Trait::SupportsQuickPlayWorld);
 							feature = Some(ConditionFeature::QuickPlayWorld);
 						}
 						if let Some(is_quick_play_multiplayer) = features.is_quick_play_multiplayer
 						{
 							ensure!(is_quick_play_multiplayer && matches!(feature, None));
-							traits.insert(TraitOrdWrapper(
-								helix::component::Trait::SupportsQuickPlayServer,
-							));
+							traits.insert(helix::component::Trait::SupportsQuickPlayServer);
 							feature = Some(ConditionFeature::QuickPlayServer);
 						}
 						if let Some(is_quick_play_realms) = features.is_quick_play_realms {
@@ -628,7 +598,7 @@ fn process_version(
 	let component = helix::component::Component {
 		format_version: 1,
 		id: "net.minecraft".into(),
-		traits: traits.into_iter().map(|t| t.into()).collect(),
+		traits,
 		assets: Some(version.asset_index.into()),
 		version: version.id.to_owned(),
 		requires: vec![], // TODO: lwjgl 2 (deal with that later)
