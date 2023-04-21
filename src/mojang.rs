@@ -374,9 +374,55 @@ fn process_version(
 					Maven3ArtifactVersion::new("2.17.0");
 			}
 			let parsed_version = Maven3ArtifactVersion::new(&library.name.version);
+			let mut changed_log4j = false;
 			if *OLDEST_UPGRADE_VERSION <= parsed_version && parsed_version < *NEWEST_UPGRADE_VERSION
 			{
 				library.name.version = String::from("2.17.0");
+				changed_log4j = true;
+			} else if library.name.artifact == "log4j-core"
+				&& (library.name.version == "2.0-rc2" || library.name.version == "2.0-beta9")
+			{
+				changed_log4j = true;
+			}
+			let log4j_url = |maven: &str, module: &str, version: &str| {
+				format!("https://{maven}/org/apache/logging/log4j/{module}/{version}/{module}-{version}.jar")
+			};
+			if changed_log4j {
+				if let Some(artifact) = &mut library.downloads.artifact {
+					artifact.url = log4j_url(
+						if library.name.version == "2.17.0" {
+							"libraries.minecraft.net"
+						} else {
+							"files.helixlauncher.dev/maven"
+						},
+						&library.name.artifact,
+						&library.name.version,
+					);
+					(artifact.sha1, artifact.size) =
+						match (&*library.name.artifact, &*library.name.version) {
+							("log4j-core", "2.17.0") => (
+								String::from("fe6e7a32c1228884b9691a744f953a55d0dd8ead"),
+								1789339,
+							),
+							("log4j-slf4j18-impl", "2.17.0") => (
+								String::from("bd7f6c0b9224dd214afb4e684957e2349b529a8d"),
+								21244,
+							),
+							("log4j-api", "2.17.0") => (
+								String::from("bbd791e9c8c9421e45337c4fe0a10851c086e36c"),
+								301776,
+							),
+							("log4j-core", "2.0-beta9") => (
+								String::from("db59ef51488f7ea6a2fd1a0bd8d862cf95f02b7a"),
+								677741,
+							),
+							("log4j-core", "2.0-rc2") => (
+								String::from("4ffd3e05eebaf965199d0b54d3cd8f8e342c9c08"),
+								765649,
+							),
+							_ => todo!("{}", library.name),
+						}
+				}
 			}
 		}
 		if library.name.group.starts_with("org.lwjgl") {
