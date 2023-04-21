@@ -562,7 +562,7 @@ fn process_version(
 			"${version_type}" => version.version_type.as_str(),
 			"${resolution_width}" => "${window.width}",
 			"${resolution_height}" => "${window.height}",
-			"${user_properties}" => "${user.properties}", // TODO: what is this?
+			"${user_properties}" => "{}", // was used for twitch integration which is no longer a thing
 			"${game_assets}" => "${instance.virtual_assets_dir}",
 			"${quickPlaySingleplayer}" => "${launch.world}",
 			"${quickPlayMultiplayer}" => "${launch.server}",
