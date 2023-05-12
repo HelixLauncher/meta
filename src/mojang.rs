@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 kb1000
+ * Copyright 2022-2023 kb1000
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
@@ -17,6 +17,7 @@ use indexmap::{IndexMap, IndexSet};
 use lazy_static::lazy_static;
 use maven_version::Maven3ArtifactVersion;
 use regex::{Captures, Regex};
+use serde::de::IgnoredAny;
 use serde::Deserialize;
 use serde_with::{serde_as, OneOrMany};
 use sha1::{Digest, Sha1};
@@ -87,7 +88,7 @@ struct FeaturesRule {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct Rule {
+pub struct Rule {
 	features: Option<FeaturesRule>,
 	os: Option<OsRule>,
 	action: RuleAction,
@@ -115,13 +116,13 @@ enum MojangConditionalValue<T> {
 }
 
 #[derive(Deserialize, Debug)]
-struct MojangVersionArguments {
+pub struct MojangVersionArguments {
 	game: Vec<MojangConditionalValue<String>>,
 	jvm: Vec<MojangConditionalValue<String>>,
 }
 
 #[derive(Deserialize, Debug)]
-struct MojangAssetIndex {
+pub struct MojangAssetIndex {
 	id: String,
 	sha1: String,
 	size: u32,
@@ -150,7 +151,7 @@ struct MojangDownload {
 }
 
 #[derive(Deserialize, Debug)]
-struct MojangDownloads {
+pub struct MojangDownloads {
 	client: MojangDownload,
 }
 
@@ -163,19 +164,19 @@ struct MojangJavaVersion {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct MojangLibraryDownloads {
-	artifact: Option<MojangLibraryArtifact>,
+pub struct MojangLibraryDownloads {
+	pub artifact: Option<MojangLibraryArtifact>,
 	#[serde(default)]
-	classifiers: HashMap<String, MojangLibraryArtifact>,
+	pub classifiers: HashMap<String, MojangLibraryArtifact>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct MojangLibraryArtifact {
-	path: String,
-	sha1: String,
-	size: u32,
-	url: String,
+pub struct MojangLibraryArtifact {
+	pub path: String,
+	pub sha1: String,
+	pub size: u32,
+	pub url: String,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -185,15 +186,15 @@ struct MojangNativeExtract {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct MojangLibrary {
-	name: GradleSpecifier,
-	downloads: MojangLibraryDownloads,
+pub struct MojangLibrary {
+	pub name: GradleSpecifier,
+	pub downloads: MojangLibraryDownloads,
 	#[serde(default)]
-	rules: Vec<Rule>,
+	pub rules: Vec<Rule>,
 	#[serde(default)]
 	extract: MojangNativeExtract,
 	#[serde(default)]
-	natives: HashMap<OsName, String>,
+	pub natives: HashMap<OsName, String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -201,20 +202,23 @@ struct MojangLogging {}
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-struct MojangVersion {
-	arguments: Option<MojangVersionArguments>,
-	asset_index: MojangAssetIndex,
-	assets: String,
+pub struct MojangVersion {
+	#[serde(rename = "_comment_", default)]
+	_comment: IgnoredAny,
+	pub inherits_from: Option<String>,
+	pub arguments: Option<MojangVersionArguments>,
+	pub asset_index: Option<MojangAssetIndex>,
+	_assets: Option<String>,
 	_compliance_level: Option<i32>,
-	downloads: MojangDownloads,
-	id: String,
+	pub downloads: Option<MojangDownloads>,
+	pub id: String,
 	java_version: Option<MojangJavaVersion>,
-	libraries: Vec<MojangLibrary>,
+	pub libraries: Vec<MojangLibrary>,
 	logging: Option<MojangLogging>,
-	main_class: String,
-	minecraft_arguments: Option<String>,
+	pub main_class: String,
+	pub minecraft_arguments: Option<String>,
 	_minimum_launcher_version: Option<i32>,
-	release_time: DateTime<Utc>,
+	pub release_time: DateTime<Utc>,
 	time: DateTime<Utc>,
 	#[serde(rename = "type")]
 	version_type: VersionType,
@@ -331,16 +335,22 @@ pub fn process() -> Result<()> {
 	Ok(())
 }
 
-fn process_version(
+pub fn process_version(
 	file: &fs::DirEntry,
 	out_base: &Path,
-) -> Result<helix::component::Component, anyhow::Error> {
+) -> Result<helix::component::Component> {
 	let mut version: MojangVersion = serde_json::from_str(&fs::read_to_string(file.path())?)
 		.with_context(|| format!("Failed to parse {}", file.file_name().to_str().unwrap()))?;
+	ensure!(version.inherits_from.is_none());
+
 	let mut classpath = IndexSet::with_capacity(version.libraries.len());
 	let mut natives = IndexSet::with_capacity(version.libraries.len());
 	let mut downloads = IndexMap::with_capacity(version.libraries.len() * 2);
-	let game_download = &version.downloads.client;
+	let game_download = &version
+		.downloads
+		.as_ref()
+		.with_context(|| "Download missing")?
+		.client;
 	let game_artifact_name = GradleSpecifier {
 		group: "com.mojang".to_owned(),
 		artifact: "minecraft".to_owned(),
@@ -645,7 +655,7 @@ fn process_version(
 		format_version: 1,
 		id: "net.minecraft".into(),
 		traits,
-		assets: Some(version.asset_index.into()),
+		assets: version.asset_index.map(|a| a.into()),
 		version: version.id.to_owned(),
 		requires: vec![], // TODO: lwjgl 2 (deal with that later)
 		conflicts: vec![],
