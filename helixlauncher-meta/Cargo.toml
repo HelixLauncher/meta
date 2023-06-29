@@ -12,5 +12,5 @@ repository = "https://github.com/HelixLauncher/meta"
 cfg-if = "1.0.0"
 chrono = { version = "0.4.24", features = ["serde"] }
 serde = {version = "1", features = ["derive"]}
-serde_with = "2"
+serde_with = "3.0.0"
 thiserror = "1"
