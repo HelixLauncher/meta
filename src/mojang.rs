@@ -6,7 +6,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeSet;
-use std::{collections::HashMap, fs, path::Path};
+use std::{fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
 use chrono::{DateTime, Utc};
@@ -167,7 +167,7 @@ struct MojangJavaVersion {
 pub struct MojangLibraryDownloads {
 	pub artifact: Option<MojangLibraryArtifact>,
 	#[serde(default)]
-	pub classifiers: HashMap<String, MojangLibraryArtifact>,
+	pub classifiers: IndexMap<String, MojangLibraryArtifact>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -194,7 +194,7 @@ pub struct MojangLibrary {
 	#[serde(default)]
 	extract: MojangNativeExtract,
 	#[serde(default)]
-	pub natives: HashMap<OsName, String>,
+	pub natives: IndexMap<OsName, String>,
 }
 
 #[derive(Deserialize, Debug)]
