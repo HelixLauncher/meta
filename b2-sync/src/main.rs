@@ -1,8 +1,4 @@
-use std::{
-	collections::{BTreeSet, HashSet},
-	fs,
-	path::Path,
-};
+use std::{collections::HashSet, fs, path::Path};
 
 use sha1::Digest;
 
@@ -23,7 +19,6 @@ async fn main() {
 	)
 	.await
 	.unwrap();
-	println!("{auth:?}");
 	let mut args = std::env::args();
 	args.next().unwrap();
 	let folder = args.next().unwrap();

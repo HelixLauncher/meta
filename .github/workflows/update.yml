@@ -36,6 +36,7 @@ jobs:
       with:
         path: 'out'
     - name: Upload output to B2
+      if: false
       run: cargo run --package b2-sync out ${{ secrets.META_B2_BUCKET }}
       env:
         B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
