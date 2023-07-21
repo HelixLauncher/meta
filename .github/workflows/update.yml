@@ -35,6 +35,11 @@ jobs:
       uses: actions/upload-pages-artifact@v1
       with:
         path: 'out'
+    - name: Upload output to B2
+      runs: cargo run --project b2-sync out ${{ secrets.META_B2_BUCKET }}
+      env:
+        B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
 
   deploy:
     needs: build

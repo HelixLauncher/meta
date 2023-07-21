@@ -26,3 +26,4 @@ tokio = {version = "1.21", features = ["macros", "rt-multi-thread"]}
 zip = "0.10.0-alpha.1"
 
 [workspace]
+members = ["helixlauncher-meta", "b2-sync"]
