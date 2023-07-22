@@ -17,7 +17,7 @@ use crate::mojang;
 pub fn process() -> Result<()> {
 	let version_base = Path::new("upstream/forge/installers");
 	fs::create_dir_all(version_base)?;
-	let out_base = Path::new("out/net.minecraftforge");
+	let out_base = Path::new("out/net.minecraftforge.forge");
 	fs::create_dir_all(out_base)?;
 
 	let mut index: helix::index::Index = vec![];
@@ -97,7 +97,7 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<helix::compon
 	ensure!(!args.contains('$'));
 	let component = helix::component::Component {
 		format_version: 1,
-		id: "net.minecraftforge".into(),
+		id: "net.minecraftforge.forge".into(),
 		version: forge_version.into(),
 		requires: vec![helix::component::ComponentDependency {
 			id: "net.minecraft".into(),
