@@ -17,6 +17,10 @@ pub async fn process(client: &Client) -> Result<()> {
 	let mut index: Index = vec![];
 
 	for loader_version in get_loader_versions(client).await? {
+		if loader_version == "0.17.5-beta.4" { // This version's meta is very broken and I hate it
+			continue;
+		}
+
 		let response = client.get(format!("https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/{loader_version}/quilt-loader-{loader_version}.json"))
             .header("User-Agent", "helixlauncher-meta (prototype)")
             .send().await?;
@@ -39,7 +43,7 @@ pub async fn process(client: &Client) -> Result<()> {
 		for library in response.libraries.common {
 			downloads.push(Download {
 				name: library.name.clone(),
-				url: library.url.clone(),
+				url: library.name.to_url(&library.url),
 				hash: crate::get_hash(client, &library).await?,
 				size: crate::get_size(client, &library).await?.try_into().unwrap(),
 			});

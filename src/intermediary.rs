@@ -20,7 +20,7 @@ pub async fn process(client: &Client) -> Result<()> {
         let library = crate::Library { name: GradleSpecifier::from_str(&format!("net.fabricmc:intermediary:{version}")).unwrap(), url: "https://maven.fabricmc.net/".into() };
 		let downloads = vec![Download {
             name: library.name.clone(),
-            url: library.url.clone(),
+            url: library.name.to_url(&library.url),
             hash: get_hash(client, &library).await?,
             size: get_size(client, &library).await?.try_into().unwrap(),
         }];

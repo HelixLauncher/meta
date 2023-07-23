@@ -76,8 +76,9 @@ pub(crate) async fn get_size(client: &Client, coord: &Library) -> Result<u64> {
 		.header("User-Agent", "helixlauncher-meta (prototype)")
 		.send()
 		.await?
-		.content_length()
-		.expect("Cannot handle servers returning no content length"))
+		.headers()
+		.get("content-length")
+		.expect("Cannot handle servers returning no content length").to_str()?.parse()?)
 }
 
 #[derive(Deserialize, Debug)]
