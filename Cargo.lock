@@ -660,6 +660,7 @@ dependencies = [
  "indexmap 2.0.0",
  "lazy_static",
  "maven-version-rs",
+ "quick-xml",
  "regex",
  "reqwest",
  "serde",
@@ -1104,6 +1105,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81b9228215d82c7b61490fec1de287136b5de6f5700f6e58ea9ad61a7964ca51"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]
