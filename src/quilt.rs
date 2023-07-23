@@ -1,10 +1,10 @@
-use std::{collections::BTreeSet, fs, path::Path};
+use std::{collections::BTreeSet, fs, path::Path, str::FromStr};
 
 use anyhow::{Context, Result};
 use chrono::{TimeZone, Utc};
 use helixlauncher_meta::{
 	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download},
-	index::Index,
+	index::Index, util::GradleSpecifier,
 };
 use reqwest::Client;
 use serde::Deserialize;
@@ -38,8 +38,14 @@ pub async fn process(client: &Client) -> Result<()> {
 			.context("unable to parse release timestamp")?;
 
 		let response: LoaderMeta = response.json().await?;
-		let mut downloads = vec![];
-		let mut classpath = vec![];
+        let library = crate::Library { name: GradleSpecifier::from_str(&format!("org.quiltmc:quilt-loader:{loader_version}")).unwrap(), url: "https://maven.quiltmc.org/repository/release/".into() };
+		let mut downloads = vec![Download {
+            name: library.name.clone(),
+            url: library.name.to_url(&library.url),
+            hash: crate::get_hash(client, &library).await?,
+            size: crate::get_size(client, &library).await?.try_into().unwrap(),
+        }];
+		let mut classpath = vec![ConditionalClasspathEntry::All(library.name)];
 		for library in response.libraries.common {
 			downloads.push(Download {
 				name: library.name.clone(),
