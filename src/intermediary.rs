@@ -4,11 +4,13 @@ use anyhow::Result;
 use chrono::Utc;
 use helixlauncher_meta::{
 	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download},
-	index::Index, util::GradleSpecifier,
+	index::Index,
+	util::GradleSpecifier,
 };
 use reqwest::Client;
+use serde::Deserialize;
 
-use crate::{Metadata, get_hash, get_size};
+use crate::{get_hash, get_size};
 
 pub async fn process(client: &Client) -> Result<()> {
 	let out_base = Path::new("out/net.fabricmc.intermediary");
@@ -17,15 +19,19 @@ pub async fn process(client: &Client) -> Result<()> {
 	let mut index: Index = vec![];
 
 	for version in get_versions(client).await? {
-        let library = crate::Library { name: GradleSpecifier::from_str(&format!("net.fabricmc:intermediary:{version}")).unwrap(), url: "https://maven.fabricmc.net/".into() };
+		let library = crate::Library {
+			name: GradleSpecifier::from_str(&format!("net.fabricmc:intermediary:{version}"))
+				.unwrap(),
+			url: "https://maven.fabricmc.net/".into(),
+		};
 		let downloads = vec![Download {
-            name: library.name.clone(),
-            url: library.name.to_url(&library.url),
-            hash: get_hash(client, &library).await?,
-            size: get_size(client, &library).await?.try_into().unwrap(),
-        }];
+			name: library.name.clone(),
+			url: library.name.to_url(&library.url),
+			hash: get_hash(client, &library).await?,
+			size: get_size(client, &library).await?.try_into().unwrap(),
+		}];
 		let classpath = vec![ConditionalClasspathEntry::All(library.name)];
-        
+
 		let component = Component {
 			format_version: 1,
 			assets: None,
@@ -66,10 +72,19 @@ pub async fn process(client: &Client) -> Result<()> {
 }
 
 async fn get_versions(client: &Client) -> Result<Vec<String>> {
-	let response = client.get("https://maven.fabricmc.net/net/fabricmc/intermediary/maven-metadata.xml")
-        .header("User-Agent", "helixlauncher-meta (prototype)")
-        .send().await?
-        .text().await?;
-	let response: Metadata = quick_xml::de::from_str(&response)?;
-	Ok(response.versioning.versions.version)
+	let response: Vec<IntermediaryVersionData> = client
+		.get("https://meta.fabricmc.net/v2/versions/intermediary")
+		.header("User-Agent", "helixlauncher-meta (prototype)")
+		.send()
+		.await?
+		.json()
+		.await?;
+	Ok(response.into_iter().map(|v| v.version).collect())
+}
+
+#[derive(Deserialize)]
+struct IntermediaryVersionData {
+	maven: GradleSpecifier,
+	version: String,
+	stable: bool,
 }

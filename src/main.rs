@@ -5,10 +5,8 @@
  */
 #![deny(rust_2018_idioms)]
 
-use std::{fs, path::Path};
-
 use anyhow::Result;
-use helixlauncher_meta::{component::{Component, Hash}, index::Index, util::GradleSpecifier};
+use helixlauncher_meta::{component::Hash, util::GradleSpecifier};
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -34,30 +32,6 @@ async fn main() -> Result<()> {
 	Ok(())
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[allow(unused)]
-pub(crate) struct Metadata {
-	artifact_id: String,
-	group_id: String,
-	versioning: Versioning,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[allow(unused)]
-pub(crate) struct Versioning {
-	latest: String,
-	release: String,
-	versions: VersionList,
-	last_updated: String,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct VersionList {
-	version: Vec<String>,
-}
-
 pub(crate) async fn get_hash(client: &Client, coord: &Library) -> Result<Hash> {
 	Ok(Hash::SHA256(
 		client
@@ -78,7 +52,9 @@ pub(crate) async fn get_size(client: &Client, coord: &Library) -> Result<u64> {
 		.await?
 		.headers()
 		.get("content-length")
-		.expect("Cannot handle servers returning no content length").to_str()?.parse()?)
+		.expect("Cannot handle servers returning no content length")
+		.to_str()?
+		.parse()?)
 }
 
 #[derive(Deserialize, Debug)]
