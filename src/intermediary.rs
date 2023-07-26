@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, fs, path::Path, str::FromStr};
 
 use anyhow::Result;
-use chrono::Utc;
+use chrono::DateTime;
 use helixlauncher_meta::{
 	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download},
 	index::Index,
@@ -30,6 +30,25 @@ pub async fn process(client: &Client) -> Result<()> {
 			hash: get_hash(client, &library).await?,
 			size: get_size(client, &library).await?.try_into().unwrap(),
 		}];
+
+		let release_time = DateTime::parse_from_rfc2822(
+			// TODO: This does one more request than necessary, should get_size or get_hash be merged into this?
+			client
+				.head(library.name.to_url(&library.url))
+				.header("User-Agent", "helixlauncher-meta (prototype)")
+				.send()
+				.await?
+				.headers()
+				.get("last-modified")
+				.expect("Cannot handle servers returning no last-modified")
+				.to_str()?,
+		)
+		.expect(&format!(
+			"Error parsing last-modified header of {}",
+			library.name.to_url(&library.url)
+		))
+		.into();
+
 		let classpath = vec![ConditionalClasspathEntry::All(library.name)];
 
 		let component = Component {
@@ -39,7 +58,7 @@ pub async fn process(client: &Client) -> Result<()> {
 			id: "net.fabricmc.intermediary".into(),
 			jarmods: vec![],
 			natives: vec![],
-			release_time: Utc::now(),
+			release_time,
 			version: version.clone(),
 			traits: BTreeSet::new(),
 			requires: vec![ComponentDependency {
