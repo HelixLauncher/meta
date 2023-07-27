@@ -24,7 +24,7 @@ pub async fn process(client: &Client) -> Result<()> {
 		}
 
 		let response = client.get(format!("https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/{loader_version}/quilt-loader-{loader_version}.json"))
-            .header("User-Agent", "helixlauncher-meta (prototype)")
+            .header("User-Agent", "helixlauncher-meta")
             .send().await?;
 
 		let release_time = Utc
@@ -110,7 +110,7 @@ pub async fn process(client: &Client) -> Result<()> {
 async fn get_loader_versions(client: &Client) -> Result<Vec<String>> {
 	let response: Vec<LoaderVersionData> = client
 		.get("https://meta.quiltmc.org/v3/versions/loader")
-		.header("User-Agent", "helixlauncher-meta (prototype)")
+		.header("User-Agent", "helixlauncher-meta")
 		.send()
 		.await?
 		.json()

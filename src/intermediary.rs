@@ -35,7 +35,7 @@ pub async fn process(client: &Client) -> Result<()> {
 			// TODO: This does one more request than necessary, should get_size or get_hash be merged into this?
 			client
 				.head(library.name.to_url(&library.url))
-				.header("User-Agent", "helixlauncher-meta (prototype)")
+				.header("User-Agent", "helixlauncher-meta")
 				.send()
 				.await?
 				.headers()
@@ -93,7 +93,7 @@ pub async fn process(client: &Client) -> Result<()> {
 async fn get_versions(client: &Client) -> Result<Vec<String>> {
 	let response: Vec<IntermediaryVersionData> = client
 		.get("https://meta.fabricmc.net/v2/versions/intermediary")
-		.header("User-Agent", "helixlauncher-meta (prototype)")
+		.header("User-Agent", "helixlauncher-meta")
 		.send()
 		.await?
 		.json()

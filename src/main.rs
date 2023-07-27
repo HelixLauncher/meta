@@ -36,7 +36,7 @@ pub(crate) async fn get_hash(client: &Client, coord: &Library) -> Result<Hash> {
 	Ok(Hash::SHA256(
 		client
 			.get(coord.name.to_url(&coord.url) + ".sha256")
-			.header("User-Agent", "helixlauncher-meta (prototype)")
+			.header("User-Agent", "helixlauncher-meta")
 			.send()
 			.await?
 			.text()
@@ -47,7 +47,7 @@ pub(crate) async fn get_hash(client: &Client, coord: &Library) -> Result<Hash> {
 pub(crate) async fn get_size(client: &Client, coord: &Library) -> Result<u64> {
 	Ok(client
 		.head(coord.name.to_url(&coord.url))
-		.header("User-Agent", "helixlauncher-meta (prototype)")
+		.header("User-Agent", "helixlauncher-meta")
 		.send()
 		.await?
 		.headers()
