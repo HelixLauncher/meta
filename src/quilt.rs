@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, fs, path::Path, str::FromStr};
 use anyhow::{Context, Result};
 use chrono::{TimeZone, Utc};
 use helixlauncher_meta::{
-	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download},
+	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download, Dependencies},
 	index::Index,
 	util::GradleSpecifier,
 };
@@ -65,23 +65,27 @@ pub async fn process(client: &Client) -> Result<()> {
 		let component = Component {
 			format_version: 1,
 			assets: None,
-			conflicts: vec![],
+			provides: vec![],
 			id: "org.quiltmc.quilt-loader".into(),
 			jarmods: vec![],
 			natives: vec![],
 			release_time,
 			version: loader_version,
 			traits: BTreeSet::new(),
-			requires: vec![
-				ComponentDependency {
-					id: "net.minecraft".into(),
-					version: None,
-				},
-				ComponentDependency {
-					id: "net.fabricmc.intermediary".into(),
-					version: None,
-				},
-			],
+			dependencies: Dependencies {
+				conflicts: vec![],
+				optional: vec![],
+				requires: vec![
+					ComponentDependency {
+						id: "net.minecraft".into(),
+						version: None,
+					},
+					ComponentDependency {
+						id: "net.fabricmc.intermediary".into(),
+						version: None,
+					},
+				],
+			},
 			game_jar: None,
 			main_class: Some(response.mainClass.client),
 			game_arguments: vec![],

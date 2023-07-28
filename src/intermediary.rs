@@ -3,7 +3,9 @@ use std::{collections::BTreeSet, fs, path::Path, str::FromStr};
 use anyhow::Result;
 use chrono::DateTime;
 use helixlauncher_meta::{
-	component::{Component, ComponentDependency, ConditionalClasspathEntry, Download},
+	component::{
+		Component, ComponentDependency, ConditionalClasspathEntry, Dependencies, Download,
+	},
 	index::Index,
 	util::GradleSpecifier,
 };
@@ -54,17 +56,21 @@ pub async fn process(client: &Client) -> Result<()> {
 		let component = Component {
 			format_version: 1,
 			assets: None,
-			conflicts: vec![],
+			dependencies: Dependencies {
+				requires: vec![ComponentDependency {
+					id: "net.minecraft".into(),
+					version: Some(version.clone()),
+				}],
+				conflicts: vec![],
+				optional: vec![],
+			},
+			provides: vec![],
 			id: "net.fabricmc.intermediary".into(),
 			jarmods: vec![],
 			natives: vec![],
 			release_time,
-			version: version.clone(),
+			version,
 			traits: BTreeSet::new(),
-			requires: vec![ComponentDependency {
-				id: "net.minecraft".into(),
-				version: Some(version),
-			}],
 			game_jar: None,
 			main_class: None,
 			game_arguments: vec![],

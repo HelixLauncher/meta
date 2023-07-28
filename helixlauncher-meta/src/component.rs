@@ -19,7 +19,7 @@ pub enum OsName {
 	Windows,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ComponentDependency {
 	pub id: String,
 	#[serde(skip_serializing_if = "Option::is_none", default)]
@@ -131,6 +131,15 @@ pub enum MinecraftArgument {
 	},
 }
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Dependencies {
+	#[serde(skip_serializing_if = "Vec::is_empty", default)]
+	pub requires: Vec<ComponentDependency>,
+	#[serde(skip_serializing_if = "Vec::is_empty", default)]
+	pub conflicts: Vec<ComponentDependency>,
+	pub optional: Vec<ComponentDependency>,
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -138,13 +147,12 @@ pub struct Component {
 	pub format_version: u32,
 	pub id: String,
 	pub version: String,
+	pub dependencies: Dependencies,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
-	pub requires: Vec<ComponentDependency>,
+	pub provides: Vec<ComponentDependency>,
 	#[serde(skip_serializing_if = "BTreeSet::is_empty", default)]
 	pub traits: BTreeSet<Trait>,
 	pub assets: Option<Assets>,
-	#[serde(skip_serializing_if = "Vec::is_empty", default)]
-	pub conflicts: Vec<ComponentDependency>,
 	pub downloads: Vec<Download>,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
 	pub jarmods: Vec<GradleSpecifier>,
