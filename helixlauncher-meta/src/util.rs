@@ -79,6 +79,24 @@ impl Display for GradleSpecifier {
 	}
 }
 
+impl GradleSpecifier {
+	pub fn to_url(&self, base_repo: &str) -> String {
+		format!(
+			"{}{}/{}/{}/{}-{}{}.{}",
+			base_repo,
+			self.group.replace(".", "/"),
+			self.artifact,
+			self.version,
+			self.artifact,
+			self.version,
+			self.classifier
+				.as_ref()
+				.map_or("".to_string(), |it| "-".to_string() + &it),
+			self.extension
+		)
+	}
+}
+
 cfg_if::cfg_if! {
 	if #[cfg(windows)] {
 		pub const CURRENT_OS: component::OsName = component::OsName::Windows;
