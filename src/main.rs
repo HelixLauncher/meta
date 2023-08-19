@@ -6,9 +6,10 @@
 #![deny(rust_2018_idioms)]
 
 use anyhow::Result;
+use futures::try_join;
 use helixlauncher_meta::{component::Hash, util::GradleSpecifier};
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 mod forge;
 mod intermediary;
@@ -19,13 +20,16 @@ mod quilt;
 async fn main() -> Result<()> {
 	let client = reqwest::Client::new();
 
-	mojang::fetch(&client).await?;
+	try_join!(
+		mojang::fetch(&client),
+		quilt::fetch(&client)
+	)?;
 
 	mojang::process()?;
 
 	// forge::process()?;
 
-	quilt::process(&client).await?;
+	quilt::process()?;
 
 	intermediary::process(&client).await?;
 
@@ -57,7 +61,7 @@ pub(crate) async fn get_size(client: &Client, coord: &Library) -> Result<u64> {
 		.parse()?)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Library {
 	name: GradleSpecifier,
 	url: String,
