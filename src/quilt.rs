@@ -142,11 +142,16 @@ pub fn process() -> Result<()> {
 		let loader_version = loader_meta.file_name().clone().to_string_lossy()
 			[..loader_meta.file_name().len() - 5]
 			.to_string();
-		let downloads: Vec<Download> = serde_json::from_str(&fs::read_to_string(&downloads_base.join(loader_meta.file_name()))?)?;
+		let downloads: Vec<Download> = serde_json::from_str(&fs::read_to_string(
+			&downloads_base.join(loader_meta.file_name()),
+		)?)?;
 		let loader_meta: LoaderMetaWithReleaseTime =
 			serde_json::from_str(&fs::read_to_string(loader_meta.path())?)?;
 
-		let classpath = downloads.iter().map(|download| ConditionalClasspathEntry::All(download.name.clone())).collect();
+		let classpath = downloads
+			.iter()
+			.map(|download| ConditionalClasspathEntry::All(download.name.clone()))
+			.collect();
 
 		let component = Component {
 			format_version: 1,
@@ -223,7 +228,7 @@ struct Libraries {
 struct MainClass {
 	client: String,
 	server: String,
-	#[serde(rename="serverLauncher")]
+	#[serde(rename = "serverLauncher")]
 	server_launcher: Option<String>,
 }
 
@@ -231,7 +236,7 @@ struct MainClass {
 struct LoaderMeta {
 	version: i32,
 	libraries: Libraries,
-	#[serde(rename="mainClass")]
+	#[serde(rename = "mainClass")]
 	main_class: MainClass,
 }
 

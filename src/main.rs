@@ -22,7 +22,8 @@ async fn main() -> Result<()> {
 
 	try_join!(
 		mojang::fetch(&client),
-		quilt::fetch(&client)
+		quilt::fetch(&client),
+		intermediary::fetch(&client),
 	)?;
 
 	mojang::process()?;
@@ -31,7 +32,7 @@ async fn main() -> Result<()> {
 
 	quilt::process()?;
 
-	intermediary::process(&client).await?;
+	intermediary::process()?;
 
 	Ok(())
 }
