@@ -369,7 +369,7 @@ pub fn process_version(
 	);
 	let mut traits = BTreeSet::new();
 	let mut is_lwjgl3 = false;
-	for mut library in &mut version.libraries {
+	for library in &mut version.libraries {
 		let mut ignore_rules = false;
 		ensure!(
 			library.rules.len() <= 1
@@ -599,29 +599,29 @@ pub fn process_version(
 							feature = Some(ConditionFeature::Demo);
 						}
 						if let Some(has_custom_resolution) = features.has_custom_resolution {
-							ensure!(has_custom_resolution && matches!(feature, None));
+							ensure!(has_custom_resolution && feature.is_none());
 							traits.insert(helix::component::Trait::SupportsCustomResolution);
 							feature = Some(ConditionFeature::CustomResolution);
 						}
 						if let Some(has_quick_plays_support) = features.has_quick_plays_support {
-							ensure!(has_quick_plays_support && matches!(feature, None));
+							ensure!(has_quick_plays_support && feature.is_none());
 							continue;
 						}
 						if let Some(is_quick_play_singleplayer) =
 							features.is_quick_play_singleplayer
 						{
-							ensure!(is_quick_play_singleplayer && matches!(feature, None));
+							ensure!(is_quick_play_singleplayer && feature.is_none());
 							traits.insert(helix::component::Trait::SupportsQuickPlayWorld);
 							feature = Some(ConditionFeature::QuickPlayWorld);
 						}
 						if let Some(is_quick_play_multiplayer) = features.is_quick_play_multiplayer
 						{
-							ensure!(is_quick_play_multiplayer && matches!(feature, None));
+							ensure!(is_quick_play_multiplayer && feature.is_none());
 							traits.insert(helix::component::Trait::SupportsQuickPlayServer);
 							feature = Some(ConditionFeature::QuickPlayServer);
 						}
 						if let Some(is_quick_play_realms) = features.is_quick_play_realms {
-							ensure!(is_quick_play_realms && matches!(feature, None));
+							ensure!(is_quick_play_realms && feature.is_none());
 							continue;
 						}
 					} else {
