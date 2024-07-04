@@ -45,19 +45,10 @@ fn process_version(file: &fs::DirEntry, out_base: &Path) -> Result<helix::compon
 		static ref VERSION_PATTERN: Regex =
 			Regex::new("^(?:[0-9.]+-forge-|[0-9.]+-Forge)(?P<forge_version>[0-9.]+)$").unwrap();
 	}
-	let archive = zip::Archive::open_at(file.path())?;
-	let mut decompressor = Default::default();
-	let file = archive
-		.into_iter()
-		.find(|file| file.name() == b"version.json")
-		.with_context(|| "version.json not found")?;
-	let reader = file
-		.reader()?
-		.seek_to_data()?
-		.remove_encryption_io()?
-		.unwrap()
-		.build_with_buffering(&mut decompressor, std::io::BufReader::new);
-	let version: mojang::MojangVersion = serde_json::from_reader(reader)?;
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(file.path())?)?;
+	//let archive = zip::Archive::open_at(file.path())?;
+    let file = std::io::BufReader::new(archive.by_name("version.json")?);
+	let version: mojang::MojangVersion = serde_json::from_reader(file)?;
 	ensure!(version.downloads.is_none());
 	ensure!(version.asset_index.is_none());
 	ensure!(version.arguments.is_none());
