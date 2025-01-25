@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: Swatinem/rust-cache@v2
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: upstream
         key: upstream
@@ -32,7 +32,7 @@ jobs:
         command: run
         args: --release --verbose
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v1
+      uses: actions/upload-pages-artifact@v3
       with:
         path: 'out'
     - name: Upload output to B2
@@ -60,4 +60,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v1
+      uses: actions/deploy-pages@v4
